@@ -14,7 +14,7 @@ def distance_table(df1,df2,metric="euclidean"):
 
     return pd.DataFrame(x,index=df1.index.values,columns=df2.index.values), m
 
-def plot_loadings_components(pca, component1, component2, features, n_genes):
+def plot_loadings_components(pca, component1, component2, features, n_genes, ax):
     """
     Function to plot the loadings of two specified PCA components on the same 2D plot
     and select the top genes based on the square mean of the loadings over all components.
@@ -53,9 +53,6 @@ def plot_loadings_components(pca, component1, component2, features, n_genes):
     min_loading_y -= buffer_y
     max_loading_y += buffer_y
 
-    # Plot the loadings as quiver plot
-    fig, ax = plt.subplots(figsize=(8, 8))
-
     ax.set_xlim(min_loading_x, max_loading_x)  # Set x-axis limits
     ax.set_ylim(min_loading_y, max_loading_y)  # Set y-axis limits
     
@@ -82,4 +79,4 @@ def plot_loadings_components(pca, component1, component2, features, n_genes):
     ax.grid(False)
     ax.legend()
 
-    return fig
+    return ax
