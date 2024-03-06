@@ -6,3 +6,4 @@ seaborn==0.13.2
 scikit-learn==1.4.1.post1
 scipy==1.11.4
 pandas==2.2.1
+pydeseq2==0.4.7

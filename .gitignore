@@ -3,3 +3,9 @@
 __pycache__
 results/*
 data/*
+
+analysis/.*/*
+analysis/*/.*/*
+analysis/__pycache__
+analysis/results/*
+analysis/data/*
