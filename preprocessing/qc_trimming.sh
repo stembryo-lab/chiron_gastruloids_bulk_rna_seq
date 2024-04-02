@@ -1,64 +1,51 @@
 #!/bin/bash
 
-#SBATCH -J andre_qc # A job-name
-#SBATCH -n 1 # number of cores
-#SBATCH -p haswell # Partition 
-#SBATCH --mem 16000 # Memory request (8Gb) 
-#SBATCH -o ./Jobs_info/slurm.%j.out
-#SBATCH -e ./Jobs_info/slurm.%j.err
+: 'Performing QC and Trimming on the FASTQs before mapping'
 
 module load FastQC/0.11.9-Java-11
 module load MultiQC/1.9-foss-2019b-Python-3.7.4    
 
-dataset_name=$1
-read_type=$2
+DATASET_NAME=$1
 
 ### check input parameters
 if [ $# -ne 2 ]
 then
     echo "Please, give:"
     echo "1) Naming for the dataset to analyze"   
-    echo "2) 'paired' or 'single'; input the nature of the sequencing files"
     exit
 fi
 
-# specify folders paths
-SCRIPTS_DIR='/homes/users/ppascual/scratch/Gulbenkian_André/Alignment'
-RAW_FILES_DIR='./Data/Fastq/'
-FASTQC_OUT='FastQC_Output'
+# paths to data
+PATH2RAW='data/fastqs/raw'
+PATH2TRIMMED='data/fastqs/trimmed'
+PATH2FASTQC='data/fastqs/fastqc'
+
+# parameters
+TRIM_Q=20
+TRIM_TYPE='--illumina'
 
 : '
-### FILE PREPROCESSING AND QC ###
-
-1. SEQUENCING FILES QC: FastQC + MultiQC
+## FastQC + MultiQC ##
 
 Run FastQC for every file in every condition. 
 Then, MultiQC merges all FastQC reports.
 '
+# FastQC
+for file in ${PATH2RAW}/*; do
+    sample=$(echo $file | sed 's:.*/::' | cut -d '.' -f 1)
 
-cd $RAW_FILES_DIR
+    if [[ ! -d $FASTQC_OUT ]]; then
+        mkdir $FASTQC_OUT
+    fi
 
-for condition in */; do
-    for file in ${condition}/*.fastq.gz; do
-    sample_id=$(echo $file | sed 's:.*/::')
-    sample_id=$(echo $sample_id | cut -d '.' -f 1)
+    # perform FastQC
+    if [[ ! -f $FASTQC_OUT/${sample_id}_fastqc.html ]]; then
+        for file in ${condition}/*.fastq.gz; do
+            fastqc -o $FASTQC_OUT $file
+        done
+    fi
 
-        #PERFORMING FASTQC FOR FILE
-        #create output directory 
-
-        if [[ ! -d $FASTQC_OUT ]]; then
-            mkdir $FASTQC_OUT
-        fi
-
-        # perform FastQC
-        if [[ ! -f $FASTQC_OUT/${sample_id}_fastqc.html ]]; then
-            for file in ${condition}/*.fastq.gz; do
-                fastqc -o $FASTQC_OUT $file
-            done
-        fi
-
-        cd $SCRIPTS_DIR/$RAW_FILES_DIR
-    done
+    cd $SCRIPTS_DIR/$RAW_FILES_DIR
 done
 
 #perform MultiQC on FastQC files
