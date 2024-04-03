@@ -112,6 +112,29 @@ Report stored in: '${PATH2FASTQC}
 Trim Illumina Adapter from read using TrimGalore!
 '
 
+if [[ $DO_TRIM==True ]]
+then
+    echo '
+    PERFORMING ADAPTER TRIMMING
+    Running Trim Galore!...
+'
+    for file in ${PATH2RAW}/*.fastq.gz
+    do
+        sample=$(echo $file | sed 's:.*/::' | cut -d '.' -f 1)
+
+        # perform adapter trimming
+        if [[ ! -f $PATH2RAW/${sample}_trimmed.fq.gz ]]
+        then
+            for file in $PATH2RAW/*.fastq.gz
+            do
+                trim_galore
+                echo 'Trimming on '${sample}' done'
+            done
+        else
+            echo 'Trimming for '$sample 'already done'
+        fi      
+    done
+fi
 # cd $SCRIPTS_DIR/$RAW_FILES_DIR
 
 # for condition in *; do
