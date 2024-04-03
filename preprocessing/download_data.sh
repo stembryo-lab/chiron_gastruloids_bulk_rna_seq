@@ -3,7 +3,7 @@
 : ' This script downloads raw fastq files, metadata and references for the QC and Alignment pipeline'
 
 # create folder to store data
-mkdir -p data/fastqs/{raw,trimmed}
+mkdir -p data/fastqs/raw
 mkdir -p data/references/{fasta,annotation}
 
 # data repository: BioStudies ArrayExpress
