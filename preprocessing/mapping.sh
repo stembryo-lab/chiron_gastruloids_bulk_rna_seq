@@ -2,23 +2,24 @@
 
 #SBATCH -J star # A job-name
 #SBATCH -p haswell # Partition 
-#SBATCH -n 12 # Number of cores 
-#SBATCH --mem 50000 #(GB per node)
+#SBATCH -n 8 # Number of cores 
+#SBATCH --mem 100000 #(GB per node)
 #SBATCH -o ./jobs.out/slurm.%j.out
 #SBATCH -e ./jobs.out/slurm.%j.err
 
 : 'Mapping trasncriptomic reads to genome with STAR'
 
+#load modules in hpc
 interactive
 module load gzip/1.10-GCCcore-11.2.0 
-module load STAR/2.7.10a-GCC-11.2.0
+module load STAR/2.7.10a-GCC-11.2.0 
 
 # global options
 DATASET_NAME=$1
 DO_MAPPING=$2
 
 # paths
-PATH2READS='data/fastqs/trimmed'
+PATH2READS='data/fastqs/raw'
 PATH2FASTA='data/references/fasta/GRCm38.p6.genome.fa'
 PATH2ANNOTATION='data/references/annotation/gencode.vM25.primary_assembly.annotation.gtf'
 PATH2GENOME_IDX='data/references/fasta/index'
@@ -83,7 +84,7 @@ then
 .
     echo "Please, give:"
     echo "1) Naming for the dataset to analyze"   
-    echo "2) "True/False" for performing Star Alignment"
+    echo "2) "true/false" for performing Star Alignment"
 .
 fi
 
@@ -110,81 +111,80 @@ fi
 
 
 # 2.ALIGNMENT
-for file in $PATH2READS/*.fq.gz
-do
-    sample=$(echo $file | sed 's:.*/::' | cut -d '.' -f 1 | cut -d '_' -f 1-2)
-    echo $sample
-    if [[ ! -f $PATH2READS/${sample}_R1_001_val_1.fq.gz ]]
-    r1=$PATH2READS/${sample}_R1_001_trimmed.fq.gz
-    then
-        if [[ ! -f $STAR_OUT/${condition_id}/${replicate_id}/Log.final.out ]]; then
-            STAR \
-            --genomeDir $PATH2GENOME_IDX \
-            --genomeLoad $LOAD_MODE \
-            --runThreadN $THREADS \
-            --readFilesCommand $READ_FORMAT \
-            --readFilesIn $r1  \
-            --sjdbGTFfile $PATH2ANNOTATION \
-            --sjdbGTFtagExonParentGene $GENE_ID \
-            --outFilterMultimapNmax $FILTER_MULTIMAP \
-            --outFileNamePrefix $MAPPING_OUT/$sample/ \
-            --outSAMtype $OUTSAM_FORMAT \
-            --quantMode $QUANTMODE
+if [[ $DO_MAPPING = true ]]
+then
+    for file in $PATH2READS/*R1*.gz
+    do
+        sample=$(echo $file | sed 's:.*/::' | cut -d '.' -f 1 | cut -d '_' -f 1-2)
+        if [[ ! -f $PATH2READS/${sample}_R2_001.fastq.gz ]]
+        then
+            r1=$PATH2READS/${sample}_R1_001.fastq.gz
+            if [[ ! -f $MAPPING_OUT/$sample/${sample}_Log.final.out ]]; then
+            echo '
+            Starting to map '${sample} 'reads
+            '
+                STAR \
+                --genomeDir $PATH2GENOME_IDX \
+                --genomeLoad $LOAD_MODE \
+                --runThreadN $THREADS \
+                --readFilesCommand $READ_FORMAT \
+                --readFilesIn $r1  \
+                --sjdbGTFfile $PATH2ANNOTATION \
+                --sjdbGTFtagExonParentGene $GENE_ID \
+                --outFilterMultimapNmax $FILTER_MULTIMAP \
+                --outFileNamePrefix $MAPPING_OUT/$sample/${sample}_ \
+                --outSAMtype $OUTSAM_FORMAT \
+                --quantMode $QUANTMODE
 
+            fi
+            echo 'Mapping done for '${sample}
+
+            # paired-end reads    
+        elif [[ -f $PATH2READS/${sample}_R2_001.fastq.gz ]]
+        then
+            r1=$PATH2READS/${sample}_R1_001.fastq.gz
+            r2=$PATH2READS/${sample}_R2_001.fastq.gz
+            if [[ ! -f $MAPPING_OUT/$sample/${sample}_Log.final.out ]]; then
+                echo '
+                Starting to map '${sample} 'reads
+                '
+                STAR \
+                --genomeDir $PATH2GENOME_IDX \
+                --genomeLoad $LOAD_MODE \
+                --runThreadN $THREADS \
+                --readFilesCommand $READ_FORMAT \
+                --readFilesIn $r1 $r2 \
+                --sjdbGTFfile $PATH2ANNOTATION \
+                --sjdbGTFtagExonParentGene $GENE_ID \
+                --outFilterMultimapNmax $FILTER_MULTIMAP \
+                --outFileNamePrefix $MAPPING_OUT/$sample/${sample}_ \
+                --outSAMtype $OUTSAM_FORMAT \
+                --quantMode $QUANTMODE
+
+            fi
+            echo 'Mapping done for '${sample}
         fi
 
-        # paired-end reads    
+        # store mapping report in MultiQC folder
+        mkdir -p ${MULTIQC_OUT}
+        cp ${MAPPING_OUT}/${sample}/${sample}_ReadsPerGene.out.tab $MULTIQC_OUT/${sample}_ReadsPerGene.out.tab
+    done
+    module unload STAR/2.7.10a-GCC-11.2.0
+    # run MultiQC on alignment reports
+    module load MultiQC/1.9-foss-2019b-Python-3.7.4 
+    multiqc $MULTIQC_OUT/* -n $DATASET_NAME -f -s -o $MULTIQC_OUT/
 
-    elif [[ -f $PATH2READS/${sample}_R1_001_val_1.fq.gz ]]
-    then
-        r1=$PATH2READS/${sample}_R1_001_val_1.fq.gz
-        r2=$PATH2READS/${sample}_R2_001_val_2.fq.gz
+    echo '
+    ==> STAR ALIGNMENT FINISHED <==
+    --------------------------------
 
-        if [[ ! -f $STAR_OUT/${condition_id}/${replicate_id}/Log.final.out ]]; then
-            STAR \
-            --genomeDir $PATH2GENOME_IDX \
-            --genomeLoad $LOAD_MODE \
-            --runThreadN $THREADS \
-            --readFilesCommand $READ_FORMAT \
-            --readFilesIn $r1 $r2 \
-            --sjdbGTFfile $PATH2ANNOTATION \
-            --sjdbGTFtagExonParentGene $GENE_ID \
-            --outFilterMultimapNmax $FILTER_MULTIMAP \
-            --outFileNamePrefix $MAPPING_OUT/$sample/ \
-            --outSAMtype $OUTSAM_FORMAT \
-            --quantMode $QUANTMODE
+    Number of files analyzed: '$(ls ${PATH2READS}/*R1* -1 | wc -l)'
+    Alignment output stored in: '${MAPPING_OUT}'
+    MultiQC and STAR reports stored in: '${MULTIQC_OUT}'
+    '
+elif [[ $DO_MAPPING = false ]]
+then
+    echo 'No read mapping performed'
+fi
 
-        fi
-    fi
-done
-
-
-# ####### 2. QUALITY CONTROL ON STARSOLO RESULTS: MULTIQC
-# cd $SCRIPTS_DIR/$STAR_OUT   
-
-# # create folder to store counts.csv and alignment reports
-# mkdir -p Gene_counts MultiQC
-
-# #QC on the alignment results (summary.csv file)
-# for condition in *h/; do
-#     condition_id=${condition::-1}  
-#     for replicate in ${condition_id}/*; do
-#         replicate_id=$(echo $replicate | sed 's:.*/::')
-
-#         # copying alignment reports files to folder 
-#         cp ${condition_id}/${replicate_id}/Log.final.out MultiQC/${condition_id}_${replicate_id}_Log.final.out
-#         # copying counts.csv to Gene_counts folder
-#         cp ${condition_id}/${replicate_id}/ReadsPerGene.out.tab Gene_counts/${condition_id}_${replicate_id}.tab
-
-#     done
-# done
-
-
-# #MultiQC 
-# module load MultiQC/1.9-foss-2019b-Python-3.7.4 
-
-# cd MultiQC/
-
-# #run MultiQC on alignment reports
-# multiqc . -n $dataset_name -f -s
 
