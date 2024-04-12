@@ -1,10 +1,11 @@
 # PREPROCESSING AND MAPPING 
 The structure of the pipeline is:
-`requirements.txt`: software and versions used in the pipleline
-`download_data.sh`: download data used in the pipeline
-`fastqc_and_trimming.sh`: QC and trimming of raw fastqs
-`mapping.sh`: mapping reads to genome
-`countdata_construct.ipynb`: mapped reads concatenation to construct bulk countdata matrix
+
+- `requirements.txt`: software and versions used in the pipleline.
+- `download_data.sh`: download data used in the pipeline.
+- `fastqc_and_trimming.sh`: QC and trimming of raw fastqs.
+- `mapping.sh`: mapping reads to genome.
+- `countdata_construct.ipynb`: mapped reads concatenation to construct bulk countdata matrix.
 
 ## 0. Download data and references
 Firstly, run:
